@@ -17,17 +17,6 @@ A clean, focused server containing bug bounty hunting workflows and REST API end
 - **Bug Bounty Workflows** - Specialized workflow generation for different phases of testing
 - **Tool Integration** - Comprehensive collection of security testing tools
 
-### API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/health` | Health check endpoint |
-| POST | `/api/bugbounty/reconnaissance-workflow` | Generate reconnaissance workflow |
-| POST | `/api/bugbounty/vulnerability-hunting-workflow` | Generate vulnerability hunting workflow |
-| POST | `/api/bugbounty/business-logic-workflow` | Generate business logic testing workflow |
-| POST | `/api/bugbounty/osint-workflow` | Generate OSINT gathering workflow |
-| POST | `/api/bugbounty/file-upload-testing` | Generate file upload testing workflow |
-| POST | `/api/bugbounty/comprehensive-assessment` | Generate comprehensive assessment combining all workflows |
 
 ## Quick Start
 
@@ -53,9 +42,6 @@ uv run src/server.py --debug --port 8888
 ### 2. Test the API
 
 ```bash
-# Health check
-curl http://127.0.0.1:8888/health
-
 # Create reconnaissance workflow
 curl -X POST http://127.0.0.1:8888/api/bugbounty/reconnaissance-workflow \
   -H "Content-Type: application/json" \
@@ -81,56 +67,7 @@ uv run src/server.py --help
 - `--port PORT`: Set server port
 - `--host HOST`: Set server host
 
-## Workflow Examples
 
-### Reconnaissance Workflow
-
-```json
-{
-  "domain": "example.com",
-  "scope": ["*.example.com", "api.example.com"],
-  "out_of_scope": ["internal.example.com"],
-  "program_type": "web"
-}
-```
-
-### Vulnerability Hunting Workflow
-
-```json
-{
-  "domain": "example.com",
-  "priority_vulns": ["rce", "sqli", "xss", "idor", "ssrf"],
-  "bounty_range": "medium"
-}
-```
-
-### Comprehensive Assessment
-
-```json
-{
-  "domain": "example.com",
-  "scope": ["*.example.com"],
-  "priority_vulns": ["rce", "sqli", "xss"],
-  "include_osint": true,
-  "include_business_logic": true
-}
-```
-
-## File Structure
-
-```
-bugbounty-mcp-server/
-├── src/
-│   ├── __init__.py        # Package initialization
-│   ├── server.py          # Flask REST API server
-│   └── mcp_server.py      # FastMCP server for AI agents
-├── .gitignore             # Git ignore patterns
-├── CLAUDE.md              # Development guidance for Claude Code
-├── README.md              # Project documentation
-├── pyproject.toml         # Project configuration and dependencies
-├── start-server.sh        # Server launcher script
-└── uv.lock                # Dependency lock file
-```
 
 ## Key Features
 
@@ -191,20 +128,3 @@ uv run pydocstyle          # Documentation check
 - Documentation: Google docstring convention
 - Type hints: Required for public APIs
 - Security: Bandit security scanning enabled
-
-## What Was Removed
-
-To maintain a clean, focused architecture, the following components are not included:
-
-- Complex visual rendering and color formatting
-- Tool execution engines and process management
-- Advanced caching and error handling systems
-- CTF competition frameworks
-- CVE intelligence and exploit generation
-- AI-powered payload generation
-- Complex dependency management
-- Selenium browser automation
-- Process monitoring and scaling
-- Advanced logging and telemetry
-
-The result is a lightweight, focused server that provides core bug bounty workflow generation functionality with a clean, simple architecture.

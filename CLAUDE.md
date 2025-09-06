@@ -19,18 +19,6 @@ The project has two main server implementations:
 - `BugBountyWorkflowManager`: Generates specialized workflows for different phases of bug bounty hunting
 - `FileUploadTestingFramework`: Handles file upload vulnerability testing scenarios
 
-### API Endpoints Structure
-
-All bug bounty endpoints follow the pattern `/api/bugbounty/{workflow-type}`:
-- reconnaissance-workflow
-- vulnerability-hunting-workflow
-- business-logic-workflow
-- osint-workflow
-- file-upload-testing
-- comprehensive-assessment
-
-Tool execution endpoints follow `/api/tools/{tool-name}`:
-- nuclei, nmap, ffuf, amass, etc.
 
 ## Dependencies & Environment Management (uv)
 - **Project Management**: Uses `uv` exclusively for fast, reliable dependency management
@@ -131,9 +119,6 @@ Use the provided launcher script:
 
 Test the servers manually:
 ```bash
-# Test REST API health endpoint
-curl http://127.0.0.1:8888/health
-
 # Test a workflow endpoint
 curl -X POST http://127.0.0.1:8888/api/bugbounty/reconnaissance-workflow \
   -H "Content-Type: application/json" \
