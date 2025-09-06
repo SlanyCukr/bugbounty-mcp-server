@@ -9,12 +9,13 @@ A clean, focused server containing bug bounty hunting workflows and REST API end
 - **REST API Endpoints**: Simple HTTP API for workflow generation and management
 - **Comprehensive Assessments**: Combine multiple workflows for complete bug bounty assessments
 
-## Extracted Components
+## Architecture
 
-### Core Classes
-- `BugBountyTarget`: Data model for bug bounty targets
-- `BugBountyWorkflowManager`: Generates specialized bug bounty workflows
-- `FileUploadTestingFramework`: Handles file upload vulnerability testing
+### Core Components
+- **REST API Server** (`src/server.py`) - Flask-based HTTP API server with bug bounty workflow endpoints
+- **MCP Server** (`src/mcp_server.py`) - FastMCP-based server for AI agent communication
+- **Bug Bounty Workflows** - Specialized workflow generation for different phases of testing
+- **Tool Integration** - Comprehensive collection of security testing tools
 
 ### API Endpoints
 
@@ -114,9 +115,15 @@ uv run src/server.py --help
 ```
 bugbounty-mcp-server/
 ├── src/
-│   └── server.py          # Main server file with all functionality
-├── example_usage.py       # Example API usage and tests
-└── README.md             # This file
+│   ├── __init__.py        # Package initialization
+│   ├── server.py          # Flask REST API server
+│   └── mcp_server.py      # FastMCP server for AI agents
+├── .gitignore             # Git ignore patterns
+├── CLAUDE.md              # Development guidance for Claude Code
+├── README.md              # Project documentation
+├── pyproject.toml         # Project configuration and dependencies
+├── start-server.sh        # Server launcher script
+└── uv.lock                # Dependency lock file
 ```
 
 ## Key Features
@@ -134,7 +141,7 @@ Project uses `uv` for fast, reliable dependency management:
 - **Flask**: Web framework for REST API
 - **FastMCP**: MCP server framework
 - **Requests**: HTTP client library
-- **Python 3.10+**: Core runtime
+- **Python 3.11+**: Core runtime (supports Python 3.11, 3.12, 3.13)
 
 Install dependencies:
 ```bash

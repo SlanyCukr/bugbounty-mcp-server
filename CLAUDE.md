@@ -88,9 +88,15 @@ Use the provided launcher script:
 
 ### Testing
 
-Run the example usage script:
+Test the servers manually:
 ```bash
-uv run example_usage.py
+# Test REST API health endpoint
+curl http://127.0.0.1:8888/health
+
+# Test a workflow endpoint
+curl -X POST http://127.0.0.1:8888/api/bugbounty/reconnaissance-workflow \
+  -H "Content-Type: application/json" \
+  -d '{"domain": "example.com", "program_type": "web"}'
 ```
 
 ## Configuration
@@ -129,11 +135,11 @@ The `BugBountyTarget` dataclass is central to most workflows and includes:
 ## Dependencies
 
 Core dependencies managed via `uv` in `pyproject.toml`:
-- `flask`: REST API framework
-- `fastmcp==2.11.3`: MCP server framework  
-- `requests`: HTTP client
-- `aiohttp`: Async HTTP support
+- `flask>=3.1.2`: REST API framework
+- `fastmcp>=2.12.2`: MCP server framework  
+- `requests>=2.32.5`: HTTP client
+- `aiohttp>=3.12.15`: Async HTTP support
 
-Python version requirement: >=3.10
+Python version requirement: >=3.11 (supports Python 3.11, 3.12, 3.13)
 
 All dependency management is handled through `uv` - do not use pip, pip-tools, poetry, or other package managers.
