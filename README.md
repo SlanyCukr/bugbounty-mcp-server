@@ -37,6 +37,12 @@ A clean, focused server containing bug bounty hunting workflows and REST API end
 # Install dependencies with uv
 uv sync
 
+# Install development dependencies (optional)
+uv sync --dev
+
+# Set up pre-commit hooks (recommended for development)
+uv run pre-commit install
+
 # Start the server
 uv run src/server.py --debug --port 8888
 
@@ -138,20 +144,53 @@ bugbounty-mcp-server/
 
 Project uses `uv` for fast, reliable dependency management:
 
+### Core Dependencies
 - **Flask**: Web framework for REST API
 - **FastMCP**: MCP server framework
 - **Requests**: HTTP client library
 - **Python 3.11+**: Core runtime (supports Python 3.11, 3.12, 3.13)
 
+### Development Dependencies
+- **Ruff**: Fast Python linter and formatter
+- **Bandit**: Security vulnerability scanner
+- **Pydocstyle**: Documentation quality checker
+- **Pyright**: Static type checker
+- **Pre-commit**: Git pre-commit hooks framework
+
 Install dependencies:
 ```bash
-uv sync
+uv sync                # Core dependencies only
+uv sync --dev         # Include development tools
 ```
 
 Add new dependencies:
 ```bash
 uv add package-name
 ```
+
+## Code Quality
+
+This project enforces code quality through automated pre-commit hooks:
+
+```bash
+# Install pre-commit hooks
+uv run pre-commit install
+
+# Run checks on all files
+uv run pre-commit run --all-files
+
+# Run specific checks
+uv run ruff check          # Linting
+uv run ruff format         # Formatting
+uv run bandit -c pyproject.toml # Security scan
+uv run pydocstyle          # Documentation check
+```
+
+**Standards:**
+- Line length: 88 characters
+- Documentation: Google docstring convention
+- Type hints: Required for public APIs
+- Security: Bandit security scanning enabled
 
 ## What Was Removed
 

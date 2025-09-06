@@ -97,7 +97,7 @@ if [[ "$SERVER_TYPE" == "rest" ]]; then
     echo -e "Port: ${GREEN}$PORT${NC}"
     echo -e "Debug: ${GREEN}$DEBUG${NC}"
     echo ""
-    
+
     if [[ "$DEBUG" == "true" ]]; then
         uv run src/server.py --debug --port "$PORT" --host "$HOST"
     else

@@ -23,7 +23,7 @@ The project has two main server implementations:
 
 All bug bounty endpoints follow the pattern `/api/bugbounty/{workflow-type}`:
 - reconnaissance-workflow
-- vulnerability-hunting-workflow  
+- vulnerability-hunting-workflow
 - business-logic-workflow
 - osint-workflow
 - file-upload-testing
@@ -69,6 +69,47 @@ Install with development dependencies:
 uv sync --dev
 ```
 
+## Code Quality & Pre-commit Hooks
+
+This project uses comprehensive pre-commit hooks to ensure code quality, security, and consistency:
+
+### Pre-commit Setup
+
+Install pre-commit hooks:
+```bash
+uv run pre-commit install
+```
+
+### Code Quality Tools
+
+The project includes the following automated checks:
+
+- **Ruff**: Fast Python linter and formatter (replaces black, isort, flake8)
+- **Bandit**: Security vulnerability scanner for Python code
+- **Pydocstyle**: Documentation quality checker using Google convention
+- **Pyright**: Fast static type checker
+- **Basic checks**: Trailing whitespace, end-of-file fixes, YAML/JSON validation
+
+### Running Pre-commit Hooks
+
+Run on all files:
+```bash
+uv run pre-commit run --all-files
+```
+
+Run on specific files:
+```bash
+uv run pre-commit run --files src/server.py
+```
+
+### Tool Configuration
+
+All tools are configured in `pyproject.toml`:
+- **Line length**: 88 characters (consistent with Ruff/Black standard)
+- **Python target**: 3.11+ compatibility
+- **Documentation**: Google docstring convention
+- **Security**: Bandit with B101 skip for development assertions
+
 ### Starting the Servers
 
 **REST API Server:**
@@ -103,7 +144,7 @@ curl -X POST http://127.0.0.1:8888/api/bugbounty/reconnaissance-workflow \
 
 ### Environment Variables
 - `BUGBOUNTY_MCP_PORT`: Server port (default: 8888)
-- `BUGBOUNTY_MCP_HOST`: Server host (default: 127.0.0.1)  
+- `BUGBOUNTY_MCP_HOST`: Server host (default: 127.0.0.1)
 - `DEBUG`: Enable debug mode (default: false)
 
 ### Command Line Options for REST Server
@@ -120,7 +161,7 @@ All workflow methods follow a similar pattern:
 3. Generate step-by-step workflow with specific commands
 4. Return structured JSON with tools, commands, and expected results
 
-### Error Handling  
+### Error Handling
 - All endpoints use try/catch with proper JSON error responses
 - Logging is configured to both console and file (`bugbounty-mcp.log`)
 - HTTP status codes follow REST conventions
@@ -136,10 +177,11 @@ The `BugBountyTarget` dataclass is central to most workflows and includes:
 
 Core dependencies managed via `uv` in `pyproject.toml`:
 - `flask>=3.1.2`: REST API framework
-- `fastmcp>=2.12.2`: MCP server framework  
+- `fastmcp>=2.12.2`: MCP server framework
 - `requests>=2.32.5`: HTTP client
 - `aiohttp>=3.12.15`: Async HTTP support
 
 Python version requirement: >=3.11 (supports Python 3.11, 3.12, 3.13)
 
 All dependency management is handled through `uv` - do not use pip, pip-tools, poetry, or other package managers.
+- Don't proactively commit and push

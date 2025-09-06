@@ -37,3 +37,66 @@ Issues = "https://github.com/yourusername/bugbounty-mcp-server/issues"
 
 [tool.setuptools]
 py-modules = ["src.mcp_server", "src.server"]
+
+[dependency-groups]
+dev = [
+    "bandit>=1.8.6",
+    "pre-commit>=4.3.0",
+    "pydocstyle>=6.3.0",
+    "ruff>=0.12.12",
+    "pyright>=1.1.405",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+exclude = [
+    ".git",
+    ".mypy_cache",
+    ".tox",
+    ".venv",
+    "build",
+    "dist",
+    "__pycache__",
+]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "UP",  # pyupgrade
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+[tool.bandit]
+exclude_dirs = [
+    "tests",
+    "tools"
+]
+skips = ["B101"]  # Skip assert_used test (common in development)
+
+[tool.pydocstyle]
+convention = "google"
+match_dir = "(?!(tests|tools)).*"
+
+[tool.pyright]
+include = ["src"]
+exclude = [
+    "tests",
+    "tools"
+]
+reportMissingImports = "none"
+reportMissingTypeStubs = "none"
+reportUnknownMemberType = "none"
+reportUnknownArgumentType = "none"
+reportUnknownVariableType = "none"
+reportAttributeAccessIssue = "none"
+pythonVersion = "3.11"
