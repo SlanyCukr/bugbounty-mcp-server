@@ -1,2 +1,0 @@
-[console_scripts]
-bugbounty-mcp = src.mcp_server:main
