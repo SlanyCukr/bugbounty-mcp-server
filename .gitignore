@@ -198,3 +198,5 @@ Desktop.ini
 
 # MCP Server specific logs
 bugbounty-mcp.log
+
+.ruff_cache
