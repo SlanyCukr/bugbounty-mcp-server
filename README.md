@@ -55,11 +55,6 @@ curl -X POST http://127.0.0.1:8888/api/bugbounty/reconnaissance-workflow \
   -d '{"domain": "example.com", "program_type": "web"}'
 ```
 
-### 3. Run Example Tests
-
-```bash
-uv run example_usage.py
-```
 
 ## Configuration
 
