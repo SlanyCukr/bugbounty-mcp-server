@@ -1,0 +1,21 @@
+Metadata-Version: 2.4
+Name: bugbounty-mcp-server
+Version: 1.0.0
+Summary: Bug Bounty MCP Server - AI Agent Communication Interface for Bug Bounty Hunting
+Author-email: Bug Bounty MCP <contact@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/yourusername/bugbounty-mcp-server
+Project-URL: Repository, https://github.com/yourusername/bugbounty-mcp-server
+Project-URL: Issues, https://github.com/yourusername/bugbounty-mcp-server/issues
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Programming Language :: Python :: 3.13
+Requires-Python: >=3.11
+Requires-Dist: flask>=3.1.2
+Requires-Dist: requests>=2.32.5
+Requires-Dist: fastmcp>=2.12.2
+Requires-Dist: aiohttp>=3.12.15

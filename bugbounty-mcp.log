@@ -1,0 +1,118 @@
+2025-09-06 16:53:33,186 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,186 - __main__ - INFO - 🎯 Bug Bounty MCP Server Starting
+2025-09-06 16:53:33,186 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,186 - __main__ - INFO - 🔗 Host: 127.0.0.1
+2025-09-06 16:53:33,186 - __main__ - INFO - 🚪 Port: 8888
+2025-09-06 16:53:33,186 - __main__ - INFO - 🐛 Debug: True
+2025-09-06 16:53:33,186 - __main__ - INFO - 📝 Log file: bugbounty-mcp.log
+2025-09-06 16:53:33,186 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,186 - __main__ - INFO - 📋 Available Bug Bounty Endpoints - PERFECT 1:1 MAPPING (40/40):
+2025-09-06 16:53:33,186 - __main__ - INFO -    🎯 Bug Bounty Workflows (6 endpoints):
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/bugbounty/reconnaissance-workflow
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/bugbounty/vulnerability-hunting-workflow
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/bugbounty/business-logic-workflow
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/bugbounty/osint-workflow
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/bugbounty/file-upload-testing
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/bugbounty/comprehensive-assessment
+2025-09-06 16:53:33,186 - __main__ - INFO -    
+2025-09-06 16:53:33,186 - __main__ - INFO -    🔧 Security Tools (29 endpoints - matches 29 MCP tools exactly):
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/nuclei
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/sqlmap
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/ffuf
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/amass
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/subfinder
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/dirsearch
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/katana
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/gau
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/waybackurls
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/arjun
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/paramspider
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/x8
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/jaeles
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/dalfox
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/httpx
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/nmap
+2025-09-06 16:53:33,186 - __main__ - INFO -    POST /api/tools/nmap-advanced
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/rustscan
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/masscan
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/gobuster
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/dirb
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/feroxbuster
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/wfuzz
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/nikto
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/wafw00f
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/wpscan
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/fierce
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/dnsenum
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/tools/hakrawler
+2025-09-06 16:53:33,187 - __main__ - INFO -    
+2025-09-06 16:53:33,187 - __main__ - INFO -    🧠 Intelligence Features (5 endpoints):
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/intelligence/analyze-target
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/intelligence/select-tools
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/intelligence/optimize-parameters
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/intelligence/create-attack-chain
+2025-09-06 16:53:33,187 - __main__ - INFO -    POST /api/intelligence/smart-scan
+2025-09-06 16:53:33,187 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,187 - __main__ - INFO - 🚀 Server ready for bug bounty hunting!
+2025-09-06 16:53:33,212 - werkzeug - INFO - [31m[1mWARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.[0m
+ * Running on http://127.0.0.1:8888
+2025-09-06 16:53:33,212 - werkzeug - INFO - [33mPress CTRL+C to quit[0m
+2025-09-06 16:53:33,214 - werkzeug - INFO -  * Restarting with stat
+2025-09-06 16:53:33,312 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,312 - __main__ - INFO - 🎯 Bug Bounty MCP Server Starting
+2025-09-06 16:53:33,312 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,312 - __main__ - INFO - 🔗 Host: 127.0.0.1
+2025-09-06 16:53:33,312 - __main__ - INFO - 🚪 Port: 8888
+2025-09-06 16:53:33,312 - __main__ - INFO - 🐛 Debug: True
+2025-09-06 16:53:33,313 - __main__ - INFO - 📝 Log file: bugbounty-mcp.log
+2025-09-06 16:53:33,313 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,313 - __main__ - INFO - 📋 Available Bug Bounty Endpoints - PERFECT 1:1 MAPPING (40/40):
+2025-09-06 16:53:33,313 - __main__ - INFO -    🎯 Bug Bounty Workflows (6 endpoints):
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/bugbounty/reconnaissance-workflow
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/bugbounty/vulnerability-hunting-workflow
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/bugbounty/business-logic-workflow
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/bugbounty/osint-workflow
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/bugbounty/file-upload-testing
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/bugbounty/comprehensive-assessment
+2025-09-06 16:53:33,313 - __main__ - INFO -    
+2025-09-06 16:53:33,313 - __main__ - INFO -    🔧 Security Tools (29 endpoints - matches 29 MCP tools exactly):
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/tools/nuclei
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/tools/sqlmap
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/tools/ffuf
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/tools/amass
+2025-09-06 16:53:33,313 - __main__ - INFO -    POST /api/tools/subfinder
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/dirsearch
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/katana
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/gau
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/waybackurls
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/arjun
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/paramspider
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/x8
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/jaeles
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/dalfox
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/httpx
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/nmap
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/nmap-advanced
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/rustscan
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/masscan
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/gobuster
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/dirb
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/feroxbuster
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/wfuzz
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/nikto
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/wafw00f
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/wpscan
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/fierce
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/dnsenum
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/tools/hakrawler
+2025-09-06 16:53:33,314 - __main__ - INFO -    
+2025-09-06 16:53:33,314 - __main__ - INFO -    🧠 Intelligence Features (5 endpoints):
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/intelligence/analyze-target
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/intelligence/select-tools
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/intelligence/optimize-parameters
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/intelligence/create-attack-chain
+2025-09-06 16:53:33,314 - __main__ - INFO -    POST /api/intelligence/smart-scan
+2025-09-06 16:53:33,314 - __main__ - INFO - ============================================================
+2025-09-06 16:53:33,314 - __main__ - INFO - 🚀 Server ready for bug bounty hunting!
+2025-09-06 16:53:33,321 - werkzeug - WARNING -  * Debugger is active!
+2025-09-06 16:53:33,332 - werkzeug - INFO -  * Debugger PIN: 266-641-494
