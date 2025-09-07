@@ -33,10 +33,13 @@ uv sync --dev
 uv run pre-commit install
 
 # Start the server
-uv run src/server.py --debug --port 8888
+uv run src/server.py
+
+# Or with environment variables
+DEBUG=true BUGBOUNTY_MCP_PORT=8888 uv run src/server.py
 
 # Or use the launcher script
-./start-server.sh --debug
+./start-server.sh --debug --port 8888
 ```
 
 ### 2. Test the API
@@ -57,15 +60,15 @@ curl -X POST http://127.0.0.1:8888/api/bugbounty/reconnaissance-workflow \
 - `BUGBOUNTY_MCP_HOST`: Server host (default: 127.0.0.1)
 - `DEBUG`: Enable debug mode (default: false)
 
-### Command Line Options
+### Usage Examples
 
 ```bash
-uv run src/server.py --help
-```
+# Start with default configuration
+uv run src/server.py
 
-- `--debug`: Enable debug mode
-- `--port PORT`: Set server port
-- `--host HOST`: Set server host
+# Start with custom configuration
+DEBUG=true BUGBOUNTY_MCP_PORT=9999 BUGBOUNTY_MCP_HOST=0.0.0.0 uv run src/server.py
+```
 
 
 

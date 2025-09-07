@@ -51,7 +51,12 @@ uv sync --dev
 
 **REST API Server:**
 ```bash
-uv run src/server.py --debug --port 8888
+uv run src/server.py
+```
+
+**With environment variables:**
+```bash
+DEBUG=true BUGBOUNTY_MCP_PORT=8888 uv run src/server.py
 ```
 
 **MCP Server:**

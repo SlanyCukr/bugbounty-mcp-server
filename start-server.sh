@@ -98,11 +98,12 @@ if [[ "$SERVER_TYPE" == "rest" ]]; then
     echo -e "Debug: ${GREEN}$DEBUG${NC}"
     echo ""
 
-    if [[ "$DEBUG" == "true" ]]; then
-        uv run src/server.py --debug --port "$PORT" --host "$HOST"
-    else
-        uv run src/server.py --port "$PORT" --host "$HOST"
-    fi
+    # Set environment variables and start server
+    export BUGBOUNTY_MCP_HOST="$HOST"
+    export BUGBOUNTY_MCP_PORT="$PORT"
+    export DEBUG="$DEBUG"
+
+    uv run src/server.py
 else
     echo -e "${BLUE}Starting MCP Server...${NC}"
     echo ""

@@ -70,8 +70,13 @@ def tool_name(param: str) -> dict[str, Any]:
 
 Run servers:
 ```bash
-uv run src/server.py --debug --port 8888
+uv run src/server.py
 uv run -m src.mcp_server
+```
+
+With environment variables:
+```bash
+DEBUG=true BUGBOUNTY_MCP_PORT=8888 uv run src/server.py
 ```
 
 Manual API testing:
