@@ -103,7 +103,7 @@ if [[ "$SERVER_TYPE" == "rest" ]]; then
     export BUGBOUNTY_MCP_PORT="$PORT"
     export DEBUG="$DEBUG"
 
-    uv run src/server.py
+    uv run -m src.rest_api_server
 else
     echo -e "${BLUE}Starting MCP Server...${NC}"
     echo ""

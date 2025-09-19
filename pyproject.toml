@@ -8,7 +8,7 @@ version = "1.0.0"
 description = "Bug Bounty MCP Server - AI Agent Communication Interface for Bug Bounty Hunting"
 license = {text = "MIT"}
 authors = [
-    {name = "Bug Bounty MCP", email = "contact@example.com"}
+    {name = "Bug Bounty MCP", email = "marek.hovadik@seznam.cz"}
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
@@ -21,10 +21,9 @@ classifiers = [
 ]
 requires-python = ">=3.11"
 dependencies = [
+    "fastmcp>=2.12.2",
     "flask>=3.1.2",
     "requests>=2.32.5",
-    "fastmcp>=2.12.2",
-    "aiohttp>=3.12.15",
 ]
 
 [project.scripts]
@@ -36,7 +35,7 @@ Repository = "https://github.com/yourusername/bugbounty-mcp-server"
 Issues = "https://github.com/yourusername/bugbounty-mcp-server/issues"
 
 [tool.setuptools]
-py-modules = ["src.mcp_server", "src.server"]
+packages = {find = {include = ["src", "src.*"]}}
 
 [dependency-groups]
 dev = [
@@ -85,7 +84,8 @@ skips = ["B101"]  # Skip assert_used test (common in development)
 
 [tool.pydocstyle]
 convention = "google"
-match_dir = "(?!(tests|tools)).*"
+# Check all code under the repo except tests
+match_dir = "(?!tests).*"
 
 [tool.pyright]
 include = ["src"]

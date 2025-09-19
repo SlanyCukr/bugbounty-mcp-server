@@ -200,3 +200,5 @@ Desktop.ini
 bugbounty-mcp.log
 
 .ruff_cache
+
+logs/
