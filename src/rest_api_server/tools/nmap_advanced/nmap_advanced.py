@@ -1,12 +1,13 @@
 """Advanced Nmap wrapper that keeps output focused on actionable findings."""
 
 import logging
+import os
 import shlex
 from typing import Any
 
 from flask import jsonify, request
 
-from src.rest_api_server.tools.nmap import parse_nmap_text_output, parse_nmap_xml_output
+from src.rest_api_server.tools.nmap import parse_nmap_output
 from src.rest_api_server.utils.commands import execute_command
 from src.rest_api_server.utils.registry import (
     create_error_response,
@@ -62,9 +63,7 @@ def _build_nmap_advanced_command(params: dict[str, Any]) -> str:
 
 
 def _collect_findings(stdout: str) -> tuple[list[dict[str, Any]], int]:
-    findings = parse_nmap_xml_output(stdout)
-    if not findings:
-        findings = parse_nmap_text_output(stdout)
+    findings = parse_nmap_output(stdout)
 
     duplicates = 0
     unique: list[dict[str, Any]] = []
@@ -106,6 +105,10 @@ def execute_nmap_advanced():
     data = request.get_json()
     logger.info("Executing advanced Nmap scan on %s", data["target"])
 
+    scan_type = data.get("scan_type", "-sS").strip()
+    if scan_type == "-sS" and not os.geteuid() == 0:
+        data["scan_type"] = "-sT"
+        logger.info("Switched to -sT due to non-root privileges")
     command = _build_nmap_advanced_command(data)
     execution_result = execute_command(command, timeout=1800)
 
@@ -127,6 +130,8 @@ def execute_nmap_advanced():
         return jsonify(error_response), status_code
 
     stdout = execution_result.get("stdout", "")
+    with open("/tmp/nmap_advanced_raw_output.log", "w") as f:
+        f.write(stdout)
     findings, duplicates = _collect_findings(stdout)
 
     stats = create_stats(

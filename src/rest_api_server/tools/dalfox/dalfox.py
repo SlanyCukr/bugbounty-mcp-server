@@ -21,13 +21,19 @@ def _extract_dalfox_params(data):
         "blind": data.get("blind", False),
         "deep": data.get("deep", False),
         "mining": data.get("mining", False),
-        "worker": data.get("worker", 25),
+        "workers": data.get("workers", 25),
         "delay": data.get("delay", 1),
         "timeout": data.get("timeout", 10),
         "waf_evasion": data.get("waf_evasion", False),
         "follow_redirects": data.get("follow_redirects", False),
         "custom_payload": data.get("custom_payload", ""),
         "additional_args": data.get("additional_args", ""),
+        "pipe_mode": data.get("pipe_mode", False),
+        "mining_dom": data.get("mining_dom", False),
+        "mining_dict": data.get("mining_dict", False),
+        "method": data.get("method", "GET"),
+        "headers": data.get("headers", ""),
+        "cookies": data.get("cookies", ""),
     }
 
     # Apply aggressive preset if requested
@@ -39,11 +45,13 @@ def _extract_dalfox_params(data):
                 "blind": True,
                 "deep": True,
                 "mining": True,
-                "worker": 100,
+                "workers": 100,
                 "delay": 0,
                 "timeout": 30,
                 "waf_evasion": True,
                 "follow_redirects": True,
+                "mining_dom": True,
+                "mining_dict": True,
             }
         )
     return base_params

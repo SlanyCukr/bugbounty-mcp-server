@@ -1,7 +1,6 @@
 """Amass tool implementation for subdomain enumeration."""
 
 import logging
-import os
 from datetime import datetime
 from typing import Any
 
@@ -12,116 +11,36 @@ from src.rest_api_server.utils.registry import tool
 
 logger = logging.getLogger(__name__)
 
-# Aggressive preset for amass
-AGGRESSIVE_PRESET = {
-    "active": True,
-    "brute": True,
-    "passive": True,
-    "alterations": True,
-    "show_sources": True,
-    "show_ips": True,
-    "timeout_minutes": 60,
-    "max_depth": 3,
-    "dns_qps": 100,
-    "resolvers_qps": 50,
-    "min_recursive": 2,
-}
 
-
-def _apply_aggressive_preset(user_params: dict, aggressive: bool = False) -> dict:
-    """Apply aggressive preset to user parameters if aggressive=True."""
-    if not aggressive:
-        return user_params
-
-    # Start with user params and apply aggressive preset
-    merged_params = user_params.copy()
-
-    # Apply aggressive preset for parameters not explicitly set by user
-    for key, aggressive_value in AGGRESSIVE_PRESET.items():
-        if key not in user_params:
-            merged_params[key] = aggressive_value
-        else:
-            should_override = key in {
-                "dns_qps",
-                "resolvers_qps",
-                "active",
-                "brute",
-                "alterations",
-                "show_sources",
-                "show_ips",
-                "timeout_minutes",
-                "max_depth",
-                "min_recursive",
-            }
-            default_like_values = (None, False, 0)
-            if should_override and user_params.get(key) in default_like_values:
-                merged_params[key] = aggressive_value
-
-    return merged_params
-
-
-def _extract_amass_params(data):
+def extract_amass_params(data: dict) -> dict:
     """Extract amass parameters from request data."""
-    # Check for aggressive mode
-    aggressive = data.get("aggressive", False)
-
-    domain = data["domain"]
-    mode = data.get("mode", "enum")
-
-    # Get string parameters
-    wordlist = data.get("wordlist")
-    wordlist_mask = data.get("wordlist_mask")
-    data_sources = data.get("data_sources")
-    exclude_sources = data.get("exclude_sources")
-    resolvers_file = data.get("resolvers_file")
-    trusted_resolvers = data.get("trusted_resolvers")
-    blacklist_file = data.get("blacklist_file")
-    config_file = data.get("config_file")
-    output_file = data.get("output_file")
-    log_file = data.get("log_file")
-    viz_input_file = data.get("viz_input_file")
-    viz_output_file = data.get("viz_output_file")
-    additional_args = data.get("additional_args")
-
-    # Get numeric parameters
-    timeout_minutes = data.get("timeout_minutes")
-    max_depth = data.get("max_depth", 0)
-    dns_qps = data.get("dns_qps")
-    resolvers_qps = data.get("resolvers_qps")
-    min_recursive = data.get("min_recursive", 0)
-    max_dns_queries = data.get("max_dns_queries")
-    ct_timeout = data.get("ct_timeout")
-
-    # Get certificate transparency parameters
-    ct_sources = data.get("ct_sources", ["crt.sh", "google"])
-
-    base_params = {
-        "domain": domain,
-        "mode": mode,
+    return {
+        "domain": data.get("target", ""),
+        "mode": data.get("mode", "enum"),
         "active": data.get("active", False),
         "brute": data.get("brute", False),
         "passive": data.get("passive", True),
-        "wordlist": wordlist,
-        "wordlist_mask": wordlist_mask,
+        "wordlist": data.get("wordlist"),
+        "wordlist_mask": data.get("wordlist_mask"),
         "alterations": data.get("alterations", False),
         "show_sources": data.get("show_sources", False),
         "show_ips": data.get("show_ips", False),
         "include_unresolved": data.get("include_unresolved", False),
-        "data_sources": data_sources,
-        "exclude_sources": exclude_sources,
-        "timeout_minutes": timeout_minutes,
-        "max_depth": max_depth,
-        "dns_qps": dns_qps,
-        "resolvers_qps": resolvers_qps,
-        "min_recursive": min_recursive,
-        "max_dns_queries": max_dns_queries,
-        "resolvers_file": resolvers_file,
-        "trusted_resolvers": trusted_resolvers,
-        "blacklist_file": blacklist_file,
+        "data_sources": data.get("data_sources"),
+        "exclude_sources": data.get("exclude_sources"),
+        "timeout_minutes": data.get("timeout_minutes"),
+        "max_depth": data.get("max_depth", 0),
+        "dns_qps": data.get("dns_qps"),
+        "resolvers_qps": data.get("resolvers_qps"),
+        "min_recursive": data.get("min_recursive", 0),
+        "max_dns_queries": data.get("max_dns_queries"),
+        "resolvers_file": data.get("resolvers_file"),
+        "trusted_resolvers": data.get("trusted_resolvers"),
+        "blacklist_file": data.get("blacklist_file"),
         "no_dns": data.get("no_dns", False),
-        "config_file": config_file,
-        "output_file": output_file,
-        "log_file": log_file,
+        "config_file": data.get("config_file"),
+        "output_file": data.get("output_file"),
+        "log_file": data.get("log_file"),
         "verbose": data.get("verbose", False),
         "silent": data.get("silent", False),
         "debug": data.get("debug", False),
@@ -131,42 +50,16 @@ def _extract_amass_params(data):
         "org": data.get("org", False),
         "exclude_disabled": data.get("exclude_disabled", True),
         "scripts_only": data.get("scripts_only", False),
-        "viz_input_file": viz_input_file,
-        "viz_output_file": viz_output_file,
-        "additional_args": additional_args,
-        "ct_sources": ct_sources,
-        "ct_timeout": ct_timeout,
+        "viz_input_file": data.get("viz_input_file"),
+        "viz_output_file": data.get("viz_output_file"),
+        "additional_args": data.get("additional_args"),
+        "ct_sources": data.get("ct_sources", ["crt.sh", "google"]),
+        "ct_timeout": data.get("ct_timeout"),
     }
 
-    # Apply aggressive preset if requested
-    return _apply_aggressive_preset(base_params, aggressive)
 
-
-def _validate_amass_config(config_file: str) -> dict:
-    """Validate amass configuration file."""
-    if not os.path.exists(config_file):
-        raise FileNotFoundError(f"Config file not found: {config_file}")
-
-    # Basic validation logic
-    return {"valid": True, "warnings": []}
-
-
-def _configure_certificate_transparency(params: dict) -> list:
-    """Configure certificate transparency log sources."""
-    cmd_parts = []
-
-    ct_sources = params.get("ct_sources", ["crt.sh", "google"])
-    for source in ct_sources:
-        cmd_parts.extend(["-src", source])
-
-    if params.get("ct_timeout"):
-        cmd_parts.extend(["-timeout", str(params["ct_timeout"])])
-
-    return cmd_parts
-
-
-def _build_amass_command(params):
-    """Build amass command from parameters using secure argument handling."""
+def build_amass_command(params: dict) -> str:
+    """Build amass command from parameters."""
     cmd_parts = ["amass"]
 
     cmd_parts.append(params["mode"])
@@ -188,9 +81,6 @@ def _build_amass_command(params):
     if params["alterations"]:
         cmd_parts.append("-alts")
 
-    # Note: Amass doesn't have native JSON output, using text output
-    # Remove the invalid -json flag
-
     # Output and information parameters
     if params["show_sources"]:
         cmd_parts.append("-src")
@@ -206,12 +96,14 @@ def _build_amass_command(params):
         cmd_parts.extend(["-exclude", params["exclude_sources"]])
 
     # Certificate transparency configuration
-    ct_parts = _configure_certificate_transparency(params)
-    cmd_parts.extend(ct_parts)
+    for source in params.get("ct_sources", []):
+        cmd_parts.extend(["-src", source])
+    if params.get("ct_timeout"):
+        cmd_parts.extend(["-timeout", str(params["ct_timeout"])])
 
     # Performance and rate limiting parameters
     if params["timeout_minutes"]:
-        timeout_seconds = params["timeout_minutes"] * 60
+        timeout_seconds = int(params["timeout_minutes"]) * 60
         cmd_parts.extend(["-timeout", str(timeout_seconds)])
     if params["max_depth"]:
         cmd_parts.extend(["-max-depth", str(params["max_depth"])])
@@ -236,11 +128,7 @@ def _build_amass_command(params):
 
     # Configuration and output parameters
     if params["config_file"]:
-        try:
-            _validate_amass_config(params["config_file"])
-            cmd_parts.extend(["-config", params["config_file"]])
-        except FileNotFoundError as e:
-            logger.warning(f"Config file validation failed: {e}")
+        cmd_parts.extend(["-config", params["config_file"]])
     if params["output_file"]:
         cmd_parts.extend(["-o", params["output_file"]])
     if params["log_file"]:
@@ -286,13 +174,14 @@ def _build_amass_command(params):
     return " ".join(cmd_parts)
 
 
-# JSON parsing removed - amass doesn't support JSON output natively
-
-
-def _parse_amass_text_output(
-    execution_result, params, command, started_at: datetime, ended_at: datetime
+def parse_amass_output(
+    execution_result: dict[str, Any],
+    params: dict,
+    command: str,
+    started_at: datetime,
+    ended_at: datetime,
 ) -> dict[str, Any]:
-    """Parse plain text amass output into structured findings."""
+    """Parse amass text output into structured findings."""
     duration_ms = int((ended_at - started_at).total_seconds() * 1000)
 
     if not execution_result["success"]:
@@ -300,6 +189,7 @@ def _parse_amass_text_output(
             "success": False,
             "tool": "amass",
             "params": params,
+            "command": command,
             "started_at": started_at.isoformat(),
             "ended_at": ended_at.isoformat(),
             "duration_ms": duration_ms,
@@ -309,6 +199,9 @@ def _parse_amass_text_output(
         }
 
     stdout = execution_result.get("stdout", "")
+    with open("/tmp/amass_raw_output.log", "w") as f:
+        f.write(stdout)
+    logger.info("Amass raw stdout logged to /tmp/amass_raw_output.log")
     findings = []
     seen_subdomains = set()
 
@@ -345,6 +238,7 @@ def _parse_amass_text_output(
         "success": True,
         "tool": "amass",
         "params": params,
+        "command": command,
         "started_at": started_at.isoformat(),
         "ended_at": ended_at.isoformat(),
         "duration_ms": duration_ms,
@@ -357,72 +251,22 @@ def _parse_amass_text_output(
     }
 
 
-def _create_response(
-    findings: list,
-    execution_result,
-    params,
-    command,
-    started_at: datetime,
-    ended_at: datetime,
-) -> dict[str, Any]:
-    """Create standardized response with deduplication."""
-    duration_ms = int((ended_at - started_at).total_seconds() * 1000)
-
-    # Remove duplicates based on subdomain
-    seen_subdomains = set()
-    unique_findings = []
-    dupes_count = 0
-
-    for finding in findings:
-        subdomain = finding["target"]
-        if subdomain not in seen_subdomains:
-            seen_subdomains.add(subdomain)
-            unique_findings.append(finding)
-        else:
-            dupes_count += 1
-
-    stdout = execution_result.get("stdout", "")
-    payload_bytes = len(stdout.encode("utf-8"))
-
-    return {
-        "success": True,
-        "tool": "amass",
-        "params": params,
-        "started_at": started_at.isoformat(),
-        "ended_at": ended_at.isoformat(),
-        "duration_ms": duration_ms,
-        "findings": unique_findings,
-        "stats": {
-            "findings": len(unique_findings),
-            "dupes": dupes_count,
-            "payload_bytes": payload_bytes,
-        },
-    }
-
-
-def _parse_amass_output(
-    execution_result, params, command, started_at: datetime, ended_at: datetime
-) -> dict[str, Any]:
-    """Parse amass text output into structured findings."""
-    # Amass only supports text output, so use text parsing directly
-    return _parse_amass_text_output(
-        execution_result, params, command, started_at, ended_at
-    )
-
-
-@tool(required_fields=["domain"])
+@tool(required_fields=["target"])
 def execute_amass():
     """Execute Amass for advanced subdomain enumeration."""
     data = request.get_json()
-    params = _extract_amass_params(data)
+    params = extract_amass_params(data)
 
     logger.info(f"Executing Amass on {params['domain']}")
 
     started_at = datetime.now()
-    command = _build_amass_command(params)
-    execution_result = execute_command(
-        command, timeout=params.get("timeout_minutes", 30) * 60
-    )
+    command = build_amass_command(params)
+    timeout_minutes = params.get("timeout_minutes")
+    if timeout_minutes is None:
+        timeout = 1800
+    else:
+        timeout = int(timeout_minutes) * 60
+    execution_result = execute_command(command, timeout=timeout)
     ended_at = datetime.now()
 
-    return _parse_amass_output(execution_result, params, command, started_at, ended_at)
+    return parse_amass_output(execution_result, params, command, started_at, ended_at)

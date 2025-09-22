@@ -3,13 +3,11 @@
 import json
 import logging
 import shlex
-import xml.etree.ElementTree as ET
-from collections.abc import Iterable
+from datetime import datetime
 from typing import Any
 
-from flask import jsonify, request
+from flask import request
 
-from src.rest_api_server.tools.nmap import determine_nmap_port_severity
 from src.rest_api_server.utils.commands import execute_command
 from src.rest_api_server.utils.registry import (
     create_error_response,
@@ -26,12 +24,8 @@ class MasscanParseError(RuntimeError):
 logger = logging.getLogger(__name__)
 
 
-def _extract_masscan_params(data: dict[str, Any]) -> dict[str, Any]:
+def extract_masscan_params(data: dict[str, Any]) -> dict[str, Any]:
     """Extract parameters for masscan execution."""
-    output_format = data.get("output_format", "json").lower()
-    if output_format not in {"json", "xml"}:
-        output_format = "json"
-
     return {
         "target": data["target"],
         "ports": data.get("ports", "1-65535"),
@@ -43,11 +37,10 @@ def _extract_masscan_params(data: dict[str, Any]) -> dict[str, Any]:
         "exclude_file": data.get("exclude_file"),
         "include_file": data.get("include_file"),
         "additional_args": data.get("additional_args", ""),
-        "output_format": output_format,
     }
 
 
-def _build_masscan_command(params: dict[str, Any]) -> str:
+def build_masscan_command(params: dict[str, Any]) -> str:
     """Build a masscan command string with safe shell escaping."""
     cmd_parts: list[str] = ["masscan"]
 
@@ -84,181 +77,114 @@ def _build_masscan_command(params: dict[str, Any]) -> str:
     )
 
     if not has_output_directive:
-        if params["output_format"] == "xml":
-            cmd_parts.extend(["-oX", "-"])
-        else:
-            cmd_parts.extend(["-oJ", "-"])
+        cmd_parts.extend(["-oJ", "-"])
 
     cmd_parts.extend(additional_parts)
 
     target = params.get("target")
     if target:
-        # Allow specifying multiple targets separated by whitespace
         for item in target.split():
             cmd_parts.append(item)
 
     return " ".join(shlex.quote(part) for part in cmd_parts)
 
 
-def _iter_masscan_records(
-    stdout: str, expected_format: str
-) -> Iterable[dict[str, Any]]:
-    """Yield structured port records from masscan output."""
-    stripped = stdout.strip()
-    if not stripped:
-        return []
+def parse_masscan_output(
+    execution_result: dict[str, Any],
+    params: dict[str, Any],
+    command: str,
+    started_at: datetime,
+    ended_at: datetime,
+) -> dict[str, Any]:
+    """Parse masscan JSON output into structured findings."""
+    duration_ms = int((ended_at - started_at).total_seconds() * 1000)
 
-    if expected_format == "xml":
-        return list(_iter_masscan_records_from_xml(stripped))
+    if not execution_result["success"]:
+        error_message = (
+            execution_result.get("stderr")
+            or execution_result.get("error")
+            or "Masscan execution failed"
+        )
+        error_response, status_code = create_error_response(
+            error_message,
+            stage="exec",
+            details={
+                "return_code": execution_result.get("return_code"),
+                "command": execution_result.get("command", command),
+            },
+            status_code=500,
+        )
+        return {
+            "success": False,
+            "tool": "masscan",
+            "params": params,
+            "command": command,
+            "started_at": started_at.isoformat(),
+            "ended_at": ended_at.isoformat(),
+            "duration_ms": duration_ms,
+            "error": error_response,
+            "findings": [],
+            "stats": {"findings": 0, "dupes": 0, "payload_bytes": 0},
+        }
 
-    if expected_format == "json":
-        return list(_iter_masscan_records_from_json(stripped))
-
-    raise MasscanParseError(f"Unsupported output format: {expected_format}")
-
-
-def _iter_masscan_records_from_xml(xml_output: str) -> Iterable[dict[str, Any]]:
+    stdout = execution_result.get("stdout", "")
     try:
-        root = ET.fromstring(xml_output)
-    except ET.ParseError as exc:
-        raise MasscanParseError("Failed to parse XML output") from exc
+        findings, duplicates = _parse_masscan_findings(stdout)
+    except MasscanParseError as exc:
+        error_response, status_code = create_error_response(
+            str(exc),
+            stage="parse",
+            details={
+                "command": execution_result.get("command", command),
+                "output_sample": stdout[:500],
+            },
+            status_code=500,
+        )
+        return {
+            "success": False,
+            "tool": "masscan",
+            "params": params,
+            "command": command,
+            "started_at": started_at.isoformat(),
+            "ended_at": ended_at.isoformat(),
+            "duration_ms": duration_ms,
+            "error": error_response,
+            "findings": [],
+            "stats": {"findings": 0, "dupes": 0, "payload_bytes": 0},
+        }
 
-    for host_elem in root.findall("host"):
-        address_elem = host_elem.find("address")
-        if address_elem is None:
-            continue
+    payload_bytes = len(stdout.encode("utf-8"))
+    stats = create_stats(len(findings), duplicates, payload_bytes)
 
-        host_ip = address_elem.get("addr", "").strip()
-        if not host_ip:
-            continue
-
-        ports_elem = host_elem.find("ports")
-        if ports_elem is None:
-            continue
-
-        for port_elem in ports_elem.findall("port"):
-            try:
-                port_id = int(port_elem.get("portid", ""))
-            except (TypeError, ValueError):
-                continue
-
-            protocol = port_elem.get("protocol", "tcp")
-            state_elem = port_elem.find("state")
-            state = (
-                state_elem.get("state", "unknown")
-                if state_elem is not None
-                else "unknown"
-            )
-
-            service_elem = port_elem.find("service")
-            service_name = (
-                service_elem.get("name", "") if service_elem is not None else ""
-            )
-            service_product = (
-                service_elem.get("product", "") if service_elem is not None else ""
-            )
-            service_version = (
-                service_elem.get("version", "") if service_elem is not None else ""
-            )
-
-            yield {
-                "host": host_ip,
-                "hostname": host_ip,
-                "port": port_id,
-                "protocol": protocol,
-                "state": state,
-                "service_name": service_name,
-                "service_product": service_product,
-                "service_version": service_version,
-                "raw": ET.tostring(port_elem, encoding="unicode"),
-            }
-
-
-def _iter_masscan_records_from_json(json_output: str) -> Iterable[dict[str, Any]]:
-    try:
-        parsed = json.loads(json_output)
-    except json.JSONDecodeError as exc:
-        raise MasscanParseError("Failed to parse JSON output") from exc
-
-    if isinstance(parsed, dict):
-        hosts = parsed.get("hosts")
-        if isinstance(hosts, list):
-            for host in hosts:
-                yield from _records_from_json_host(host)
-        else:
-            yield from _records_from_json_host(parsed)
-        return
-
-    if isinstance(parsed, list):
-        for entry in parsed:
-            yield from _records_from_json_host(entry)
-
-    return []
-
-
-def _records_from_json_host(host_entry: dict[str, Any]) -> Iterable[dict[str, Any]]:
-    host_ip = host_entry.get("ip") or host_entry.get("host") or ""
-    if not host_ip:
-        return
-
-    timestamp = host_entry.get("timestamp")
-    ports = host_entry.get("ports")
-
-    if isinstance(ports, list):
-        for port_entry in ports:
-            record = _record_from_json_port(host_ip, port_entry, timestamp)
-            if record:
-                yield record
-        return
-
-    # Some outputs flatten ports at top level
-    record = _record_from_json_port(host_ip, host_entry, timestamp)
-    if record:
-        yield record
-
-
-def _record_from_json_port(
-    host_ip: str, port_entry: dict[str, Any], timestamp: Any
-) -> dict[str, Any] | None:
-    try:
-        port_value = port_entry.get("port")
-        if port_value is None:
-            return None
-        port_id = int(port_value)
-    except (TypeError, ValueError):
-        return None
-
-    protocol = port_entry.get("proto") or port_entry.get("protocol", "tcp")
-    state = port_entry.get("status") or port_entry.get("state", "open")
-
-    service_info = port_entry.get("service") or {}
-    banner = port_entry.get("banner") or service_info.get("banner")
-
-    record = {
-        "host": host_ip,
-        "hostname": host_ip,
-        "port": port_id,
-        "protocol": protocol,
-        "state": state,
-        "service_name": service_info.get("name", ""),
-        "service_product": service_info.get("product", ""),
-        "service_version": service_info.get("version", ""),
-        "banner": banner,
-        "timestamp": timestamp,
-        "raw": json.dumps(port_entry, ensure_ascii=False),
+    return {
+        "success": True,
+        "tool": "masscan",
+        "params": params,
+        "command": command,
+        "started_at": started_at.isoformat(),
+        "ended_at": ended_at.isoformat(),
+        "duration_ms": duration_ms,
+        "findings": findings,
+        "stats": stats,
     }
-    return record
 
 
-def _collect_findings(
-    stdout: str, output_format: str
-) -> tuple[list[dict[str, Any]], int]:
-    """Convert raw masscan output into unique findings."""
+def _parse_masscan_findings(stdout: str) -> tuple[list[dict[str, Any]], int]:
+    """Convert raw masscan JSON output into unique findings."""
     findings: list[dict[str, Any]] = []
     seen: set[tuple[str, int, str]] = set()
     duplicates = 0
 
-    records = _iter_masscan_records(stdout, output_format)
+    stripped = stdout.strip()
+    if not stripped:
+        return findings, duplicates
+
+    try:
+        parsed = json.loads(stripped)
+    except json.JSONDecodeError as exc:
+        raise MasscanParseError("Failed to parse JSON output") from exc
+
+    records = _parse_masscan_json_structure(parsed)
 
     for record in records:
         if record is None:
@@ -279,8 +205,6 @@ def _collect_findings(
 
         state = record.get("state", "open")
         service_name = record.get("service_name", "")
-        severity = determine_nmap_port_severity(port, service_name, state)
-        confidence = "high" if state == "open" else "medium"
 
         tags = ["port", "scan", protocol, state]
         if service_name:
@@ -311,8 +235,8 @@ def _collect_findings(
                 finding_type="port",
                 target=host,
                 evidence=evidence,
-                severity=severity,
-                confidence=confidence,
+                severity="info",
+                confidence="high" if state == "open" else "medium",
                 tags=tags,
                 raw_ref=record.get("raw", ""),
             )
@@ -321,56 +245,91 @@ def _collect_findings(
     return findings, duplicates
 
 
+def _parse_masscan_json_structure(parsed: Any) -> list[dict[str, Any]]:
+    """Parse masscan JSON output into structured records."""
+    records = []
+
+    if isinstance(parsed, dict):
+        hosts = parsed.get("hosts")
+        if isinstance(hosts, list):
+            for host in hosts:
+                records.extend(_parse_json_host_entry(host))
+        else:
+            records.extend(_parse_json_host_entry(parsed))
+    elif isinstance(parsed, list):
+        for entry in parsed:
+            records.extend(_parse_json_host_entry(entry))
+
+    return records
+
+
+def _parse_json_host_entry(host_entry: dict[str, Any]) -> list[dict[str, Any]]:
+    """Parse a single host entry from JSON."""
+    host_ip = host_entry.get("ip") or host_entry.get("host") or ""
+    if not host_ip:
+        return []
+
+    timestamp = host_entry.get("timestamp")
+    ports = host_entry.get("ports")
+    records = []
+
+    if isinstance(ports, list):
+        for port_entry in ports:
+            record = _parse_json_port_entry(host_ip, port_entry, timestamp)
+            if record:
+                records.append(record)
+    else:
+        record = _parse_json_port_entry(host_ip, host_entry, timestamp)
+        if record:
+            records.append(record)
+
+    return records
+
+
+def _parse_json_port_entry(
+    host_ip: str, port_entry: dict[str, Any], timestamp: Any
+) -> dict[str, Any] | None:
+    """Parse a single port entry from JSON."""
+    try:
+        port_value = port_entry.get("port")
+        if port_value is None:
+            return None
+        port_id = int(port_value)
+    except (TypeError, ValueError):
+        return None
+
+    protocol = port_entry.get("proto") or port_entry.get("protocol", "tcp")
+    state = port_entry.get("status") or port_entry.get("state", "open")
+
+    service_info = port_entry.get("service") or {}
+    banner = port_entry.get("banner") or service_info.get("banner")
+
+    return {
+        "host": host_ip,
+        "hostname": host_ip,
+        "port": port_id,
+        "protocol": protocol,
+        "state": state,
+        "service_name": service_info.get("name", ""),
+        "service_product": service_info.get("product", ""),
+        "service_version": service_info.get("version", ""),
+        "banner": banner,
+        "timestamp": timestamp,
+        "raw": json.dumps(port_entry, ensure_ascii=False),
+    }
+
+
 @tool(required_fields=["target"])
 def execute_masscan():
     """Execute Masscan and return structured port findings."""
     data = request.get_json()
-    params = _extract_masscan_params(data)
+    params = extract_masscan_params(data)
 
     logger.info("Executing Masscan on %s", params["target"])
 
-    command = _build_masscan_command(params)
+    started_at = datetime.now()
+    command = build_masscan_command(params)
     execution_result = execute_command(command, timeout=600)
+    ended_at = datetime.now()
 
-    if not execution_result["success"]:
-        error_message = (
-            execution_result.get("stderr")
-            or execution_result.get("error")
-            or "Masscan execution failed"
-        )
-        error_response, status_code = create_error_response(
-            error_message,
-            stage="exec",
-            details={
-                "return_code": execution_result.get("return_code"),
-                "command": execution_result.get("command", command),
-            },
-            status_code=500,
-        )
-        return jsonify(error_response), status_code
-
-    stdout = execution_result.get("stdout", "")
-    try:
-        findings, duplicates = _collect_findings(stdout, params["output_format"])
-    except MasscanParseError as exc:
-        error_response, status_code = create_error_response(
-            str(exc),
-            stage="parse",
-            details={
-                "command": execution_result.get("command", command),
-                "output_sample": stdout[:500],
-            },
-            status_code=500,
-        )
-        return jsonify(error_response), status_code
-
-    stats = create_stats(
-        len(findings),
-        duplicates,
-        len(stdout.encode("utf-8")),
-    )
-
-    return {
-        "findings": findings,
-        "stats": stats,
-    }
+    return parse_masscan_output(execution_result, params, command, started_at, ended_at)

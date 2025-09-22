@@ -1,0 +1,1 @@
+/home/slanycukr/Documents/MCP_servers/bugbounty-mcp-server/src/rest_api_server/workflows/file_upload_testing/AGENTS.md
