@@ -1,0 +1,1 @@
+/home/slanycukr/Documents/MCP_servers/bugbounty-mcp-server/src/rest_api_server/tools/feroxbuster/AGENTS.md

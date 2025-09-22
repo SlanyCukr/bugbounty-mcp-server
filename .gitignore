@@ -202,3 +202,4 @@ bugbounty-mcp.log
 .ruff_cache
 
 logs/
+*.txt

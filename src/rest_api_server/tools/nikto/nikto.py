@@ -1,6 +1,7 @@
 """nikto tool implementation."""
 
 import logging
+from datetime import datetime
 
 from flask import request
 
@@ -10,13 +11,13 @@ from src.rest_api_server.utils.registry import tool
 logger = logging.getLogger(__name__)
 
 
-def _extract_nikto_params(data):
-    """Extract and validate nikto parameters from request data."""
+def extract_nikto_params(data):
+    """Extract nikto parameters from request data."""
     # Check for aggressive mode
     aggressive = data.get("aggressive", False)
 
     # Base parameters
-    base_params = {
+    params = {
         "target": data["target"],
         "port": data.get("port", "80"),
         "ssl": data.get("ssl", False),
@@ -45,7 +46,7 @@ def _extract_nikto_params(data):
     # Apply aggressive preset if requested
     if aggressive:
         # Nikto aggressive preset
-        base_params.update(
+        params.update(
             {
                 "plugins": "@@ALL",
                 "timeout": 30,
@@ -55,10 +56,10 @@ def _extract_nikto_params(data):
                 "output_format": "json",
             }
         )
-    return base_params
+    return params
 
 
-def _build_nikto_command(params):
+def build_nikto_command(params):
     """Build nikto command from parameters."""
     cmd_parts = ["nikto", "-h", params["target"]]
 
@@ -123,27 +124,24 @@ def _build_nikto_command(params):
     return " ".join(cmd_parts)
 
 
-def _parse_nikto_result(execution_result, params, command):
+def parse_nikto_output(execution_result, params, command, started_at, ended_at):
     """Parse nikto execution result and format response."""
+    duration_ms = int((ended_at - started_at).total_seconds() * 1000)
+
     result = {
         "tool": "nikto",
         "target": params["target"],
-        "parameters": {
-            "port": params["port"],
-            "ssl": params["ssl"],
-            "plugins": params["plugins"],
-            "auth_type": params.get("auth_type", ""),
-            "has_custom_headers": bool(params.get("headers")),
-            "user_agent": params.get("user_agent", ""),
-            "proxy": params.get("proxy", ""),
-            "virtual_host": params.get("virtual_host", ""),
-        },
+        "params": params,
         "command": command,
-        "status": "completed" if execution_result["success"] else "failed",
+        "started_at": started_at.isoformat(),
+        "ended_at": ended_at.isoformat(),
+        "duration_ms": duration_ms,
+        "success": execution_result["success"],
         "raw_output": execution_result.get("stdout", ""),
         "error_output": execution_result.get("stderr", ""),
         "return_code": execution_result.get("return_code", -1),
-        "execution_time": None,
+        "findings": [],
+        "stats": {"findings": 0, "dupes": 0, "payload_bytes": 0},
     }
 
     # Parse basic findings from output if successful
@@ -168,9 +166,21 @@ def _parse_nikto_result(execution_result, params, command):
                         "server version",
                     ]
                 ):
-                    findings.append({"message": line, "raw_output": line})
+                    findings.append(
+                        {
+                            "type": "vulnerability",
+                            "target": params["target"],
+                            "evidence": {"raw_output": line},
+                            "severity": "info",  # Direct mapping
+                            "confidence": "medium",  # Direct mapping
+                            "tags": ["nikto", "web-server"],
+                            "raw_ref": line,
+                        }
+                    )
 
             result["findings"] = findings
+            result["stats"]["findings"] = len(findings)
+            result["stats"]["payload_bytes"] = len(result["raw_output"].encode("utf-8"))
         except Exception as e:
             logger.warning(f"Failed to parse Nikto findings: {e}")
 
@@ -181,11 +191,13 @@ def _parse_nikto_result(execution_result, params, command):
 def execute_nikto():
     """Execute Nikto web server vulnerability scanner."""
     data = request.get_json()
-    params = _extract_nikto_params(data)
+    params = extract_nikto_params(data)
 
     logger.info(f"Executing Nikto scan on {params['target']}")
 
-    command = _build_nikto_command(params)
+    started_at = datetime.now()
+    command = build_nikto_command(params)
     execution_result = execute_command(command, params["timeout"])
+    ended_at = datetime.now()
 
-    return _parse_nikto_result(execution_result, params, command)
+    return parse_nikto_output(execution_result, params, command, started_at, ended_at)

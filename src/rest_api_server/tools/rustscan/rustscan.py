@@ -2,18 +2,15 @@
 
 import json
 import logging
-import re
 import shlex
+from datetime import datetime
 from typing import Any
 
-from flask import jsonify, request
+from flask import request
 
-from src.rest_api_server.tools.nmap import determine_nmap_port_severity
 from src.rest_api_server.utils.commands import execute_command
 from src.rest_api_server.utils.registry import (
-    create_error_response,
     create_finding,
-    create_stats,
     tool,
 )
 
@@ -31,7 +28,6 @@ AGGRESSIVE_PRESET = {
     "tries": 3,
     "batch_size": 4500,
     "ports": "1-65535",
-    "greppable": True,
 }
 
 
@@ -48,26 +44,42 @@ def _apply_aggressive_preset(
     return merged
 
 
-def _extract_rustscan_params(data: dict[str, Any]) -> dict[str, Any]:
+def extract_rustscan_params(data: dict[str, Any]) -> dict[str, Any]:
+    """Extract and validate RustScan parameters from request data.
+
+    Args:
+        data: The incoming request JSON data.
+
+    Returns:
+        Dict containing extracted and processed parameters for RustScan.
+    """
     params = {
         "target": data["target"],
         "ports": data.get("ports", ""),
-        "ulimit": int(data.get("ulimit", 5000)),
-        "batch_size": int(data.get("batch_size", 4500)),
-        "timeout": int(data.get("timeout", 1500)),
-        "tries": int(data.get("tries", 1)),
-        "no_nmap": bool(data.get("no_nmap", False)),
-        "scripts": bool(data.get("scripts", True)),
-        "greppable": bool(data.get("greppable", True)),
-        "accessible": bool(data.get("accessible", False)),
+        "ulimit": data.get("ulimit", 5000),
+        "batch_size": data.get("batch_size", 4500),
+        "timeout": data.get("timeout", 1500),
+        "tries": data.get("tries", 1),
+        "no_nmap": data.get("no_nmap", False),
+        "scripts": data.get("scripts", True),
+        "greppable": data.get("greppable", True),
+        "accessible": data.get("accessible", False),
         "additional_args": data.get("additional_args", ""),
-        "aggressive": bool(data.get("aggressive", False)),
+        "aggressive": data.get("aggressive", False),
     }
 
     return _apply_aggressive_preset(params, params["aggressive"])
 
 
-def _build_rustscan_command(params: dict[str, Any]) -> str:
+def build_rustscan_command(params: dict[str, Any]) -> str:
+    """Build the RustScan command line from the provided parameters.
+
+    Args:
+        params: Dict of parameters extracted from request.
+
+    Returns:
+        Str representing the complete command to execute.
+    """
     cmd_parts: list[str] = [
         "rustscan",
         "-a",
@@ -80,7 +92,7 @@ def _build_rustscan_command(params: dict[str, Any]) -> str:
         str(params["timeout"]),
     ]
 
-    if params["tries"] > 1:
+    if params["tries"] and int(params["tries"]) > 1:
         cmd_parts.extend(["--tries", str(params["tries"])])
 
     ports_spec = params.get("ports")
@@ -120,7 +132,8 @@ def _build_rustscan_command(params: dict[str, Any]) -> str:
     return " ".join(shlex.quote(part) for part in cmd_parts)
 
 
-def _records_from_json(stdout: str) -> list[dict[str, Any]]:
+def _parse_rustscan_json_output(stdout: str) -> list[dict[str, Any]]:
+    """Parse RustScan JSON output into raw records."""
     try:
         parsed = json.loads(stdout)
     except json.JSONDecodeError as exc:
@@ -182,63 +195,54 @@ def _records_from_json(stdout: str) -> list[dict[str, Any]]:
     return records
 
 
-GREPPABLE_PATTERN = re.compile(r"^(?P<host>[^\s]+)\s*->\s*\[(?P<ports>[^]]+)\]")
+def parse_rustscan_output(
+    execution_result: dict[str, Any],
+    params: dict[str, Any],
+    command: str,
+    started_at: datetime,
+    ended_at: datetime,
+) -> dict[str, Any]:
+    """Parse RustScan execution result and return structured response."""
+    duration_ms = int((ended_at - started_at).total_seconds() * 1000)
 
+    if not execution_result["success"]:
+        return {
+            "success": False,
+            "tool": "rustscan",
+            "params": params,
+            "command": command,
+            "started_at": started_at.isoformat(),
+            "ended_at": ended_at.isoformat(),
+            "duration_ms": duration_ms,
+            "error": execution_result.get("error", "Command execution failed"),
+            "findings": [],
+            "stats": {"findings": 0, "dupes": 0, "payload_bytes": 0},
+        }
 
-def _records_from_greppable(stdout: str) -> list[dict[str, Any]]:
-    records: list[dict[str, Any]] = []
-
-    for line in stdout.splitlines():
-        line = line.strip()
-        if not line:
-            continue
-
-        match = GREPPABLE_PATTERN.match(line)
-        if not match:
-            continue
-
-        host = match.group("host")
-        ports_text = match.group("ports")
-        for port_entry in ports_text.split(","):
-            port_entry = port_entry.strip().strip("[]")
-            if not port_entry:
-                continue
-            try:
-                port = int(port_entry)
-            except ValueError:
-                continue
-
-            records.append(
-                {
-                    "host": host,
-                    "port": port,
-                    "protocol": "tcp",
-                    "state": "open",
-                    "service": "",
-                    "raw": line,
-                }
-            )
-
-    return records
-
-
-def _collect_findings(stdout: str) -> tuple[list[dict[str, Any]], int]:
-    if not stdout.strip():
-        return [], 0
-
-    records: list[dict[str, Any]] = []
-
-    try:
-        records = _records_from_json(stdout)
-    except RustscanParseError:
-        records = _records_from_greppable(stdout)
-
-    if not records:
-        raise RustscanParseError("Unsupported RustScan output format")
-
-    findings: list[dict[str, Any]] = []
+    stdout = execution_result.get("stdout", "")
+    findings = []
     seen: set[tuple[str, int, str]] = set()
     duplicates = 0
+
+    try:
+        records = _parse_rustscan_json_output(stdout)
+    except RustscanParseError:
+        return {
+            "success": False,
+            "tool": "rustscan",
+            "params": params,
+            "command": command,
+            "started_at": started_at.isoformat(),
+            "ended_at": ended_at.isoformat(),
+            "duration_ms": duration_ms,
+            "error": "Failed to parse RustScan JSON output",
+            "findings": [],
+            "stats": {
+                "findings": 0,
+                "dupes": 0,
+                "payload_bytes": len(stdout.encode("utf-8")),
+            },
+        }
 
     for record in records:
         host = record.get("host")
@@ -255,7 +259,7 @@ def _collect_findings(stdout: str) -> tuple[list[dict[str, Any]], int]:
 
         state = record.get("state", "open")
         service = record.get("service", "")
-        severity = determine_nmap_port_severity(port, service, state)
+        severity = "medium"
         confidence = "high" if state == "open" else "medium"
 
         tags = ["port", "scan", protocol, state]
@@ -268,7 +272,7 @@ def _collect_findings(stdout: str) -> tuple[list[dict[str, Any]], int]:
             "port": port,
             "protocol": protocol,
             "state": state,
-            "service_info": service,
+            "service_name": service,
             "discovered_by": "rustscan",
         }
 
@@ -284,59 +288,38 @@ def _collect_findings(stdout: str) -> tuple[list[dict[str, Any]], int]:
             )
         )
 
-    return findings, duplicates
+    payload_bytes = len(stdout.encode("utf-8"))
+
+    return {
+        "success": True,
+        "tool": "rustscan",
+        "params": params,
+        "command": command,
+        "started_at": started_at.isoformat(),
+        "ended_at": ended_at.isoformat(),
+        "duration_ms": duration_ms,
+        "findings": findings,
+        "stats": {
+            "findings": len(findings),
+            "dupes": duplicates,
+            "payload_bytes": payload_bytes,
+        },
+    }
 
 
 @tool(required_fields=["target"])
 def execute_rustscan():
     """Execute RustScan and return structured findings only."""
     data = request.get_json()
-    params = _extract_rustscan_params(data)
+    params = extract_rustscan_params(data)
 
     logger.info("Executing RustScan on %s", params["target"])
 
-    command = _build_rustscan_command(params)
+    started_at = datetime.now()
+    command = build_rustscan_command(params)
     execution_result = execute_command(command, timeout=600)
+    ended_at = datetime.now()
 
-    if not execution_result["success"]:
-        error_message = (
-            execution_result.get("stderr")
-            or execution_result.get("error")
-            or "RustScan execution failed"
-        )
-        error_response, status_code = create_error_response(
-            error_message,
-            stage="exec",
-            details={
-                "return_code": execution_result.get("return_code"),
-                "command": execution_result.get("command", command),
-            },
-            status_code=500,
-        )
-        return jsonify(error_response), status_code
-
-    stdout = execution_result.get("stdout", "")
-    try:
-        findings, duplicates = _collect_findings(stdout)
-    except RustscanParseError as exc:
-        error_response, status_code = create_error_response(
-            str(exc),
-            stage="parse",
-            details={
-                "command": execution_result.get("command", command),
-                "output_sample": stdout[:500],
-            },
-            status_code=500,
-        )
-        return jsonify(error_response), status_code
-
-    stats = create_stats(
-        len(findings),
-        duplicates,
-        len(stdout.encode("utf-8")),
+    return parse_rustscan_output(
+        execution_result, params, command, started_at, ended_at
     )
-
-    return {
-        "findings": findings,
-        "stats": stats,
-    }

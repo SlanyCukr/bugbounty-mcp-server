@@ -3,8 +3,8 @@
 from typing import Any
 
 from flask import request
-from logger import get_logger
 
+from src.rest_api_server.logger import get_logger
 from src.rest_api_server.utils.registry import workflow
 
 logger = get_logger(__name__)

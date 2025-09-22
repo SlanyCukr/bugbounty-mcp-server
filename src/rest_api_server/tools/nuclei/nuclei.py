@@ -2,8 +2,7 @@
 
 import json
 import logging
-import time
-from datetime import UTC, datetime
+from datetime import datetime
 
 from flask import request
 
@@ -22,7 +21,7 @@ AGGRESSIVE_PRESET = {
 }
 
 
-def _apply_aggressive_preset(user_params: dict, aggressive: bool = False) -> dict:
+def apply_aggressive_preset(user_params: dict, aggressive: bool = False) -> dict:
     """Apply aggressive preset to user parameters if aggressive=True."""
     if not aggressive:
         return user_params
@@ -46,58 +45,12 @@ def _apply_aggressive_preset(user_params: dict, aggressive: bool = False) -> dic
     return merged_params
 
 
-def _validate_template_path(template_path):
-    """Validate that template path exists and is accessible."""
-    import os
-
-    if not template_path:
-        return True  # Empty template path is valid (uses default)
-
-    if os.path.isfile(template_path) or os.path.isdir(template_path):
-        return True
-
-    # Check if it's a valid template ID or tag
-    if os.path.sep not in template_path and not template_path.startswith("."):
-        return True
-
-    return False
-
-
-def _prepare_custom_templates(params):
-    """Prepare and validate custom templates."""
-    template_issues = []
-
-    # Validate template directory
-    if params.get("template_dir") and not _validate_template_path(
-        params["template_dir"]
-    ):
-        template_issues.append(
-            f"Template directory not found: {params['template_dir']}"
-        )
-
-    # Validate custom templates
-    if params.get("custom_templates"):
-        templates = params["custom_templates"]
-        if isinstance(templates, list):
-            for template in templates:
-                if not _validate_template_path(template):
-                    template_issues.append(f"Template not found: {template}")
-        elif not _validate_template_path(templates):
-            template_issues.append(f"Template not found: {templates}")
-
-    # Validate main template parameter
-    if params.get("template") and not _validate_template_path(params["template"]):
-        template_issues.append(f"Template not found: {params['template']}")
-
-    return template_issues
-
-
-def _extract_nuclei_params(data):
-    """Extract and validate nuclei parameters from request data."""
+def extract_nuclei_params(data):
+    """Extract nuclei parameters from request data."""
     # Check for aggressive mode
     aggressive = data.get("aggressive", False)
 
-    base_params = {
+    params = {
         "target": data["target"],
         "severity": data.get("severity"),
         "tags": data.get("tags"),
@@ -117,10 +70,10 @@ def _extract_nuclei_params(data):
     }
 
     # Apply aggressive preset if requested
-    return _apply_aggressive_preset(base_params, aggressive)
+    return apply_aggressive_preset(params, aggressive)
 
 
-def _build_nuclei_command(params):
+def build_nuclei_command(params):
     """Build nuclei command from parameters."""
     cmd_parts = ["nuclei"]
 
@@ -147,7 +100,7 @@ def _build_nuclei_command(params):
                 cmd_parts.extend(["-t", template])
         else:
             cmd_parts.extend(["-t", params["custom_templates"]])
-    elif params["template"]:
+    elif params.get("template"):
         cmd_parts.extend(["-t", params["template"]])
 
     # Other parameters
@@ -173,20 +126,7 @@ def _build_nuclei_command(params):
     return " ".join(cmd_parts)
 
 
-def _map_nuclei_severity_to_unified(nuclei_severity: str) -> str:
-    """Map nuclei severity levels to unified scale."""
-    severity_mapping = {
-        "info": "info",
-        "low": "low",
-        "medium": "medium",
-        "high": "high",
-        "critical": "critical",
-        "unknown": "info",
-    }
-    return severity_mapping.get(nuclei_severity.lower(), "info")
-
-
-def _parse_nuclei_findings(stdout: str) -> tuple[list[dict], dict]:
+def parse_nuclei_output(stdout: str) -> tuple[list[dict], dict]:
     """Parse nuclei JSON output and extract findings with statistics."""
     findings = []
     stats = {"findings": 0, "dupes": 0, "payload_bytes": len(stdout.encode("utf-8"))}
@@ -266,7 +206,7 @@ def _parse_nuclei_findings(stdout: str) -> tuple[list[dict], dict]:
                     "type": "vuln",
                     "target": target,
                     "evidence": evidence,
-                    "severity": _map_nuclei_severity_to_unified(severity),
+                    "severity": severity,  # Direct mapping, no conversion
                     "confidence": "high",  # High confidence for template matches
                     "tags": tags,
                     "raw_ref": f"nuclei_{len(findings)}",
@@ -290,24 +230,25 @@ def _parse_nuclei_findings(stdout: str) -> tuple[list[dict], dict]:
     return findings, stats
 
 
-def _parse_nuclei_result(execution_result, params, command, start_time, end_time):
+def parse_nuclei_result(execution_result, params, command, started_at, ended_at):
     """Parse nuclei execution result and format unified response."""
-    duration_ms = int((end_time - start_time) * 1000)
+    duration_ms = int((ended_at - started_at).total_seconds() * 1000)
 
     # Base response structure
     response = {
         "tool": "nuclei",
         "params": params,
-        "started_at": datetime.fromtimestamp(start_time, UTC).isoformat(),
-        "ended_at": datetime.fromtimestamp(end_time, UTC).isoformat(),
+        "started_at": started_at.isoformat(),
+        "ended_at": ended_at.isoformat(),
         "duration_ms": duration_ms,
         "findings": [],
         "stats": {"findings": 0, "dupes": 0, "payload_bytes": 0},
+        "success": execution_result["success"],
     }
 
     # Parse findings if execution was successful
     if execution_result["success"] and execution_result.get("stdout"):
-        findings, stats = _parse_nuclei_findings(execution_result["stdout"])
+        findings, stats = parse_nuclei_output(execution_result["stdout"])
         response["findings"] = findings
         response["stats"] = stats
 
@@ -325,29 +266,13 @@ def _parse_nuclei_result(execution_result, params, command, start_time, end_time
 def execute_nuclei():
     """Execute Nuclei vulnerability scanner."""
     data = request.get_json()
-    params = _extract_nuclei_params(data)
+    params = extract_nuclei_params(data)
 
     logger.info(f"Executing Nuclei scan on {params['target']}")
 
-    # Validate templates before execution
-    template_issues = _prepare_custom_templates(params)
-    if template_issues:
-        logger.warning(f"Template validation issues: {template_issues}")
-        return {
-            "tool": "nuclei",
-            "params": params,
-            "error": {
-                "message": f"Template validation failed: {'; '.join(template_issues)}",
-                "return_code": -1,
-            },
-            "success": False,
-            "findings": [],
-            "stats": {"findings": 0, "dupes": 0, "payload_bytes": 0},
-        }
-
-    start_time = time.time()
-    command = _build_nuclei_command(params)
+    started_at = datetime.now()
+    command = build_nuclei_command(params)
     execution_result = execute_command(command, timeout=600)
-    end_time = time.time()
+    ended_at = datetime.now()
 
-    return _parse_nuclei_result(execution_result, params, command, start_time, end_time)
+    return parse_nuclei_result(execution_result, params, command, started_at, ended_at)
