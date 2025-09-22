@@ -352,6 +352,7 @@ def tool(
             "function": decorated_func,
             "methods": methods,
             "endpoint": endpoint,
+            "required_fields": required_fields,
             "original_function": func,
         }
 
@@ -393,6 +394,7 @@ def workflow(
             "function": decorated_func,
             "methods": methods,
             "endpoint": endpoint,
+            "required_fields": required_fields,
             "original_function": func,
         }
 
@@ -435,11 +437,19 @@ def get_registered_endpoints() -> dict[str, Any]:
     """Get information about all registered endpoints."""
     return {
         "tools": {
-            name: {"endpoint": config["endpoint"], "methods": config["methods"]}
+            name: {
+                "endpoint": config["endpoint"],
+                "methods": config["methods"],
+                "required_fields": config.get("required_fields", []),
+            }
             for name, config in _TOOL_REGISTRY.items()
         },
         "workflows": {
-            name: {"endpoint": config["endpoint"], "methods": config["methods"]}
+            name: {
+                "endpoint": config["endpoint"],
+                "methods": config["methods"],
+                "required_fields": config.get("required_fields", []),
+            }
             for name, config in _WORKFLOW_REGISTRY.items()
         },
     }

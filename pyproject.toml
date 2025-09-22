@@ -22,7 +22,9 @@ classifiers = [
 requires-python = ">=3.11"
 dependencies = [
     "fastmcp>=2.12.2",
+    "flasgger>=0.9.7.1",
     "flask>=3.1.2",
+    "pyyaml>=6.0.2",
     "requests>=2.32.5",
 ]
 
